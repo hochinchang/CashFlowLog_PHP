@@ -29,6 +29,20 @@ $fixedExpenseStmt = $pdo->prepare($fixedExpenseSql);
 $fixedExpenseStmt->execute([':year' => $year]);
 $fixedExpenseRows = $fixedExpenseStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$fixedExpenseItemSql = "
+    SELECT
+        項目,
+        MONTH(支出日期) AS month_num,
+        SUM(金額) AS month_total
+    FROM fix_expense_tab
+    WHERE YEAR(支出日期) = :year
+    GROUP BY 項目, MONTH(支出日期)
+    ORDER BY 項目, MONTH(支出日期)
+";
+$fixedExpenseItemStmt = $pdo->prepare($fixedExpenseItemSql);
+$fixedExpenseItemStmt->execute([':year' => $year]);
+$fixedExpenseItemRows = $fixedExpenseItemStmt->fetchAll(PDO::FETCH_ASSOC);
+
 $fixedIncomeSql = "
     SELECT
         MONTH(進帳日期) AS month_num,
@@ -40,6 +54,20 @@ $fixedIncomeSql = "
 $fixedIncomeStmt = $pdo->prepare($fixedIncomeSql);
 $fixedIncomeStmt->execute([':year' => $year]);
 $fixedIncomeRows = $fixedIncomeStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$fixedIncomeItemSql = "
+    SELECT
+        項目,
+        MONTH(進帳日期) AS month_num,
+        SUM(金額) AS month_total
+    FROM monthly_income_tab
+    WHERE YEAR(進帳日期) = :year
+    GROUP BY 項目, MONTH(進帳日期)
+    ORDER BY 項目, MONTH(進帳日期)
+";
+$fixedIncomeItemStmt = $pdo->prepare($fixedIncomeItemSql);
+$fixedIncomeItemStmt->execute([':year' => $year]);
+$fixedIncomeItemRows = $fixedIncomeItemStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $categories = [];
 $monthlyByCategory = [];
@@ -61,6 +89,10 @@ $cumulativeByCategory = [];
 $monthGrandTotal = array_fill(1, 12, 0);
 $monthFixedExpenseTotal = array_fill(1, 12, 0);
 $monthFixedIncomeTotal = array_fill(1, 12, 0);
+$fixedExpenseItems = [];
+$monthlyByFixedExpenseItem = [];
+$fixedIncomeItems = [];
+$monthlyByFixedIncomeItem = [];
 
 foreach ($categoryList as $category) {
     $running = 0;
@@ -88,6 +120,29 @@ foreach ($fixedIncomeRows as $row) {
     $monthFixedIncomeTotal[$monthNum] = (int)$row['month_total'];
 }
 
+foreach ($fixedExpenseItemRows as $row) {
+    $item = $row['項目'];
+    $monthNum = (int)$row['month_num'];
+    $amount = (int)$row['month_total'];
+
+    $fixedExpenseItems[$item] = true;
+    $monthlyByFixedExpenseItem[$item][$monthNum] = $amount;
+}
+
+foreach ($fixedIncomeItemRows as $row) {
+    $item = $row['項目'];
+    $monthNum = (int)$row['month_num'];
+    $amount = (int)$row['month_total'];
+
+    $fixedIncomeItems[$item] = true;
+    $monthlyByFixedIncomeItem[$item][$monthNum] = $amount;
+}
+
+$fixedExpenseItemList = array_keys($fixedExpenseItems);
+sort($fixedExpenseItemList);
+$fixedIncomeItemList = array_keys($fixedIncomeItems);
+sort($fixedIncomeItemList);
+
 $runningGrandTotal = 0;
 $monthGrandCumulative = [];
 $runningFixedExpenseTotal = 0;
@@ -97,6 +152,8 @@ $monthFixedIncomeCumulative = [];
 $runningNetIncomeTotal = 0;
 $monthNetIncomeTotal = [];
 $monthNetIncomeCumulative = [];
+$fixedExpenseItemCumulative = [];
+$fixedIncomeItemCumulative = [];
 foreach ($months as $monthNum) {
     $runningGrandTotal += $monthGrandTotal[$monthNum];
     $monthGrandCumulative[$monthNum] = $runningGrandTotal;
@@ -110,6 +167,34 @@ foreach ($months as $monthNum) {
     $monthNetIncomeTotal[$monthNum] = $monthFixedIncomeTotal[$monthNum] - ($monthGrandTotal[$monthNum] + $monthFixedExpenseTotal[$monthNum]);
     $runningNetIncomeTotal += $monthNetIncomeTotal[$monthNum];
     $monthNetIncomeCumulative[$monthNum] = $runningNetIncomeTotal;
+}
+
+foreach ($fixedExpenseItemList as $item) {
+    $running = 0;
+
+    foreach ($months as $monthNum) {
+        $monthAmount = $monthlyByFixedExpenseItem[$item][$monthNum] ?? 0;
+        $running += $monthAmount;
+
+        $fixedExpenseItemCumulative[$item][$monthNum] = [
+            'month' => $monthAmount,
+            'cumulative' => $running,
+        ];
+    }
+}
+
+foreach ($fixedIncomeItemList as $item) {
+    $running = 0;
+
+    foreach ($months as $monthNum) {
+        $monthAmount = $monthlyByFixedIncomeItem[$item][$monthNum] ?? 0;
+        $running += $monthAmount;
+
+        $fixedIncomeItemCumulative[$item][$monthNum] = [
+            'month' => $monthAmount,
+            'cumulative' => $running,
+        ];
+    }
 }
 
 $hasData = !empty($categoryList)
@@ -222,6 +307,19 @@ $hasData = !empty($categoryList)
             <?php endforeach; ?>
         </tr>
 
+        <?php foreach ($fixedExpenseItemList as $item): ?>
+            <tr>
+                <td class="category">　└ 固支：<?= htmlspecialchars($item) ?></td>
+                <?php foreach ($months as $monthNum): ?>
+                    <?php $cell = $fixedExpenseItemCumulative[$item][$monthNum]; ?>
+                    <td>
+                        <?= number_format($cell['cumulative']) ?>
+                        <div class="month-amount">當月 <?= number_format($cell['month']) ?></div>
+                    </td>
+                <?php endforeach; ?>
+            </tr>
+        <?php endforeach; ?>
+
         <tr class="grand-total-row">
             <td class="category">每月固定收入總計</td>
             <?php foreach ($months as $monthNum): ?>
@@ -231,6 +329,19 @@ $hasData = !empty($categoryList)
                 </td>
             <?php endforeach; ?>
         </tr>
+
+        <?php foreach ($fixedIncomeItemList as $item): ?>
+            <tr>
+                <td class="category">　└ 收入：<?= htmlspecialchars($item) ?></td>
+                <?php foreach ($months as $monthNum): ?>
+                    <?php $cell = $fixedIncomeItemCumulative[$item][$monthNum]; ?>
+                    <td>
+                        <?= number_format($cell['cumulative']) ?>
+                        <div class="month-amount">當月 <?= number_format($cell['month']) ?></div>
+                    </td>
+                <?php endforeach; ?>
+            </tr>
+        <?php endforeach; ?>
 
         <tr class="grand-total-row">
             <td class="category">淨收入（固定收入 - 全部支出）</td>
