@@ -22,6 +22,12 @@ $current = $_GET['page'] ?? 'monthly_income';
        class="<?= $current == 'monthly_calendar' ? 'active' : '' ?>">
         每月報表
     </a>
+
+
+    <a href="index.php?page=category_monthly_summary"
+       class="<?= $current == 'category_monthly_summary' ? 'active' : '' ?>">
+        分類月累計
+    </a>
 </div>
 
 
