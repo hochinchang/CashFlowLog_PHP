@@ -1,5 +1,5 @@
 <?php
-require_once '../include/db.php';
+require_once __DIR__ . '/../include/db.php';
 
 $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
 
