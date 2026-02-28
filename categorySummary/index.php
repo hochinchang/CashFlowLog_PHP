@@ -17,6 +17,30 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute([':year' => $year]);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$fixedExpenseSql = "
+    SELECT
+        MONTH(支出日期) AS month_num,
+        SUM(金額) AS month_total
+    FROM fix_expense_tab
+    WHERE YEAR(支出日期) = :year
+    GROUP BY MONTH(支出日期)
+";
+$fixedExpenseStmt = $pdo->prepare($fixedExpenseSql);
+$fixedExpenseStmt->execute([':year' => $year]);
+$fixedExpenseRows = $fixedExpenseStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$fixedIncomeSql = "
+    SELECT
+        MONTH(進帳日期) AS month_num,
+        SUM(金額) AS month_total
+    FROM monthly_income_tab
+    WHERE YEAR(進帳日期) = :year
+    GROUP BY MONTH(進帳日期)
+";
+$fixedIncomeStmt = $pdo->prepare($fixedIncomeSql);
+$fixedIncomeStmt->execute([':year' => $year]);
+$fixedIncomeRows = $fixedIncomeStmt->fetchAll(PDO::FETCH_ASSOC);
+
 $categories = [];
 $monthlyByCategory = [];
 
@@ -35,6 +59,8 @@ sort($categoryList);
 $months = range(1, 12);
 $cumulativeByCategory = [];
 $monthGrandTotal = array_fill(1, 12, 0);
+$monthFixedExpenseTotal = array_fill(1, 12, 0);
+$monthFixedIncomeTotal = array_fill(1, 12, 0);
 
 foreach ($categoryList as $category) {
     $running = 0;
@@ -52,12 +78,43 @@ foreach ($categoryList as $category) {
     }
 }
 
+foreach ($fixedExpenseRows as $row) {
+    $monthNum = (int)$row['month_num'];
+    $monthFixedExpenseTotal[$monthNum] = (int)$row['month_total'];
+}
+
+foreach ($fixedIncomeRows as $row) {
+    $monthNum = (int)$row['month_num'];
+    $monthFixedIncomeTotal[$monthNum] = (int)$row['month_total'];
+}
+
 $runningGrandTotal = 0;
 $monthGrandCumulative = [];
+$runningFixedExpenseTotal = 0;
+$monthFixedExpenseCumulative = [];
+$runningFixedIncomeTotal = 0;
+$monthFixedIncomeCumulative = [];
+$runningNetIncomeTotal = 0;
+$monthNetIncomeTotal = [];
+$monthNetIncomeCumulative = [];
 foreach ($months as $monthNum) {
     $runningGrandTotal += $monthGrandTotal[$monthNum];
     $monthGrandCumulative[$monthNum] = $runningGrandTotal;
+
+    $runningFixedExpenseTotal += $monthFixedExpenseTotal[$monthNum];
+    $monthFixedExpenseCumulative[$monthNum] = $runningFixedExpenseTotal;
+
+    $runningFixedIncomeTotal += $monthFixedIncomeTotal[$monthNum];
+    $monthFixedIncomeCumulative[$monthNum] = $runningFixedIncomeTotal;
+
+    $monthNetIncomeTotal[$monthNum] = $monthFixedIncomeTotal[$monthNum] - ($monthGrandTotal[$monthNum] + $monthFixedExpenseTotal[$monthNum]);
+    $runningNetIncomeTotal += $monthNetIncomeTotal[$monthNum];
+    $monthNetIncomeCumulative[$monthNum] = $runningNetIncomeTotal;
 }
+
+$hasData = !empty($categoryList)
+    || array_sum($monthFixedExpenseTotal) !== 0
+    || array_sum($monthFixedIncomeTotal) !== 0;
 ?>
 
 <!DOCTYPE html>
@@ -120,8 +177,8 @@ foreach ($months as $monthNum) {
     <button type="submit">查詢</button>
 </form>
 
-<?php if (empty($categoryList)): ?>
-    <p class="empty-message">此年度尚無支出資料。</p>
+<?php if (!$hasData): ?>
+    <p class="empty-message">此年度尚無支出或收入資料。</p>
 <?php else: ?>
     <table>
         <tr>
@@ -151,6 +208,36 @@ foreach ($months as $monthNum) {
                 <td>
                     <?= number_format($monthGrandCumulative[$monthNum]) ?>
                     <div class="month-amount">當月 <?= number_format($monthGrandTotal[$monthNum]) ?></div>
+                </td>
+            <?php endforeach; ?>
+        </tr>
+
+        <tr class="grand-total-row">
+            <td class="category">每月固定支出總計</td>
+            <?php foreach ($months as $monthNum): ?>
+                <td>
+                    <?= number_format($monthFixedExpenseCumulative[$monthNum]) ?>
+                    <div class="month-amount">當月 <?= number_format($monthFixedExpenseTotal[$monthNum]) ?></div>
+                </td>
+            <?php endforeach; ?>
+        </tr>
+
+        <tr class="grand-total-row">
+            <td class="category">每月固定收入總計</td>
+            <?php foreach ($months as $monthNum): ?>
+                <td>
+                    <?= number_format($monthFixedIncomeCumulative[$monthNum]) ?>
+                    <div class="month-amount">當月 <?= number_format($monthFixedIncomeTotal[$monthNum]) ?></div>
+                </td>
+            <?php endforeach; ?>
+        </tr>
+
+        <tr class="grand-total-row">
+            <td class="category">淨收入（固定收入 - 全部支出）</td>
+            <?php foreach ($months as $monthNum): ?>
+                <td>
+                    <?= number_format($monthNetIncomeCumulative[$monthNum]) ?>
+                    <div class="month-amount">當月 <?= number_format($monthNetIncomeTotal[$monthNum]) ?></div>
                 </td>
             <?php endforeach; ?>
         </tr>
