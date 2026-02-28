@@ -47,6 +47,9 @@ $page = $_GET['page'] ?? 'monthly_income'; // 預設頁面
         case 'monthly_calendar':
             include 'expenseCalendar/index.php';
             break;
+        case 'category_monthly_summary':
+            include 'categorySummary/index.php';
+            break;
         default:
             echo "<h2>頁面不存在</h2>";
     }
