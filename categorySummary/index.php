@@ -234,9 +234,14 @@ $hasData = !empty($categoryList)
     }
 
     .month-amount {
-        color: #6b7280;
+        color: #000;
         font-size: 12px;
-        margin-top: 2px;
+        margin-bottom: 2px;
+    }
+
+    .total-amount {
+        color: #6b7280;
+        font-size: 14px;
     }
 
     .grand-total-row {
@@ -280,8 +285,8 @@ $hasData = !empty($categoryList)
                 <?php foreach ($months as $monthNum): ?>
                     <?php $cell = $cumulativeByCategory[$category][$monthNum]; ?>
                     <td>
-                        <?= number_format($cell['cumulative']) ?>
                         <div class="month-amount">當月 <?= number_format($cell['month']) ?></div>
+                        <div class="total-amount">總計 <?= number_format($cell['cumulative']) ?></div>
                     </td>
                 <?php endforeach; ?>
             </tr>
@@ -291,8 +296,8 @@ $hasData = !empty($categoryList)
             <td class="category">總計</td>
             <?php foreach ($months as $monthNum): ?>
                 <td>
-                    <?= number_format($monthGrandCumulative[$monthNum]) ?>
                     <div class="month-amount">當月 <?= number_format($monthGrandTotal[$monthNum]) ?></div>
+                    <div class="total-amount">總計 <?= number_format($monthGrandCumulative[$monthNum]) ?></div>
                 </td>
             <?php endforeach; ?>
         </tr>
@@ -301,8 +306,8 @@ $hasData = !empty($categoryList)
             <td class="category">每月固定支出總計</td>
             <?php foreach ($months as $monthNum): ?>
                 <td>
-                    <?= number_format($monthFixedExpenseCumulative[$monthNum]) ?>
                     <div class="month-amount">當月 <?= number_format($monthFixedExpenseTotal[$monthNum]) ?></div>
+                    <div class="total-amount">總計 <?= number_format($monthFixedExpenseCumulative[$monthNum]) ?></div>
                 </td>
             <?php endforeach; ?>
         </tr>
@@ -313,8 +318,8 @@ $hasData = !empty($categoryList)
                 <?php foreach ($months as $monthNum): ?>
                     <?php $cell = $fixedExpenseItemCumulative[$item][$monthNum]; ?>
                     <td>
-                        <?= number_format($cell['cumulative']) ?>
                         <div class="month-amount">當月 <?= number_format($cell['month']) ?></div>
+                        <div class="total-amount">總計 <?= number_format($cell['cumulative']) ?></div>
                     </td>
                 <?php endforeach; ?>
             </tr>
@@ -324,8 +329,8 @@ $hasData = !empty($categoryList)
             <td class="category">每月固定收入總計</td>
             <?php foreach ($months as $monthNum): ?>
                 <td>
-                    <?= number_format($monthFixedIncomeCumulative[$monthNum]) ?>
                     <div class="month-amount">當月 <?= number_format($monthFixedIncomeTotal[$monthNum]) ?></div>
+                    <div class="total-amount">總計 <?= number_format($monthFixedIncomeCumulative[$monthNum]) ?></div>
                 </td>
             <?php endforeach; ?>
         </tr>
@@ -336,8 +341,8 @@ $hasData = !empty($categoryList)
                 <?php foreach ($months as $monthNum): ?>
                     <?php $cell = $fixedIncomeItemCumulative[$item][$monthNum]; ?>
                     <td>
-                        <?= number_format($cell['cumulative']) ?>
                         <div class="month-amount">當月 <?= number_format($cell['month']) ?></div>
+                        <div class="total-amount">總計 <?= number_format($cell['cumulative']) ?></div>
                     </td>
                 <?php endforeach; ?>
             </tr>
@@ -347,8 +352,8 @@ $hasData = !empty($categoryList)
             <td class="category">淨收入（固定收入 - 全部支出）</td>
             <?php foreach ($months as $monthNum): ?>
                 <td>
-                    <?= number_format($monthNetIncomeCumulative[$monthNum]) ?>
                     <div class="month-amount">當月 <?= number_format($monthNetIncomeTotal[$monthNum]) ?></div>
+                    <div class="total-amount">總計 <?= number_format($monthNetIncomeCumulative[$monthNum]) ?></div>
                 </td>
             <?php endforeach; ?>
         </tr>
